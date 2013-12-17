@@ -1,7 +1,3 @@
-<?php
-//including common mongo connection file
-include('mongo_connection.php');
-?>
 <!DOCTYPE html>
 <html lang="en">
 	<head>
@@ -51,7 +47,7 @@ include('mongo_connection.php');
 			<div class="row">
 				<div class="span4">
 					<br>
-					<form class="form-horizontal" data-bind="jqValidation: validationContext">
+					<form class="form-horizontal" id="form">
 						<fieldset>			
 							<!-- Form Name -->
 							<legend>Add User details</legend>
@@ -106,7 +102,7 @@ include('mongo_connection.php');
 								<label class="col-md-4 control-label" for="button1id"></label>
 								<div class="col-md-8">
 									<button tabindex="7" type="submit" id="button1id" name="button1id" class="btn btn-success" data-bind="click:saveUserDetails">Submit</button>
-									<button tabindex="8" type="reset" id="button2id" name="button2id" class="btn btn-danger" data-bind="click:resetForm">Cancel</button>
+									<button tabindex="8" type="reset" id="button2id" name="button2id" class="btn btn-danger">Cancel</button>
 								</div>
 							</div>
 							<div class="form-group" data-bind="html:insertStatus"></div>
@@ -117,26 +113,34 @@ include('mongo_connection.php');
 			
 			<div class="row">
 				<div class="span4">
-					<?php
-					//Selecting the users_collection
-					$collection = $database->selectCollection('users_collection');					
+					<div class="" data-bind='simpleGrid: gridViewModel, simpleGridTemplate:"custom_grid_template"'></div>
 					
-					// Retrieving all the posts in the collection
-					// If you want to retrieve specific posts based on user, relations, etc. put filter condition in find 
-					$users_cursor=$collection->find()->sort(array('_id'=>-1));
+					<script type="text/html" id="custom_grid_template">
+						<table class="ko-grid" cellspacing="0">
+							<thead>
+								<tr data-bind="foreach: columns">
+									<th data-bind="text: headerText"></th>									
+								</tr>
+							</thead>
+							<tbody data-bind="foreach: itemsOnCurrentPage">
+							   <tr data-bind="foreach: $parent.columns">
+								   
+								   <!--ko if: typeof rowText == 'object' && typeof rowText.action == 'function'-->
+								   <td><button class="btn btn-danger" data-bind="click:rowText.action($parent)">Delete</button></td>
+								   <!-- /ko -->
+								   
+								   <!--ko ifnot: typeof rowText == 'object' && typeof rowText.action == 'function'-->
+								   <td data-bind="text: typeof rowText == 'function' ? rowText($parent) : $parent[rowText] "></td>
+								   <!--/ko-->
+								</tr>
+							</tbody>
+						</table>
+					</script>					
 					
-					$userDetailsObj	=	'';					
-					//Iterating over all the retrieved posts
-					while ($users_cursor->hasNext()) { 
-						$user = $users_cursor->getNext();
-						$userDetailsObj	.=	"{user_id:'".$user['_id']."', txtUserName:'".$user['name']."', txtContactNo:'".$user['contact_no']."', txtEmail:'".$user['email']."', radGender:'".$user['gender']."', txtAboutUser:'".$user['comments']."'},";
-					}					
-					?>
-					<div class="" data-bind='simpleGrid: gridViewModel'></div>
 					<button class="btn btn-success" data-bind='click: sortByName'>Sort by name</button>					
 				</div>
 			</div>
-		</div>	
+		</div>
 		
 		<!-- Just for debugging purposes. Don't actually copy this line! -->
 		<!--[if lt IE 9]><script src="js/ie8-responsive-file-warning.js"></script><![endif]-->
@@ -150,72 +154,108 @@ include('mongo_connection.php');
 		<script type="text/javascript" src="http://code.jquery.com/jquery-1.10.1.min.js"></script>
 		<script type="text/javascript" src="js/bootstrap.js"></script>
 		<script type="text/javascript" src="js/knockout-3.0.0.js"></script>		
-		<script type="text/javascript" src="js/knockout.simpleGrid.3.0.js"></script>
+		<script type="text/javascript" src="js/knockout.simpleGrid.3.0.js"></script>		
 		<script type="text/javascript" src="js/script.js"></script>
+			
 		
-		<script type="text/javascript">
+		<script type="text/javascript">			
+			//	var initialData = [<?php //echo $userDetailsObj; ?>];			
+			//$.get( "test.php" );
+			var d	=	'';
 			
-			var initialData = [<?php echo $userDetailsObj; ?>];
+			$.post( "php_scripts/insert_user_details.php?action=find", function( data ) {
+				alert(data);
+				d = data;
+			});
+			
+			var initialData = [	d ];
+			alert(initialData.length);
 			//var initialData = [ { name: "Optimistic Snail", sales: 420, price: 1.50 }, { name: "Optimistic Snail", sales: 420, price: 1.50 } ]
-			
-			//function validateAndSaveUserDetails(userDetails) {
-			var validateAndSaveUserDetails = function(userDetails) {
+			var delBtn	=	"<button class=\"btn btn-danger\" data-bind=\"click:removeItem\" value=\"delete\" type=\"button\">Delete</button>";
+			//function myViewModel(userDetails) {
+			var myViewModel = function(userDetails) {
 				var self = this;
-				self.items = ko.observableArray(userDetails);			
+				self.items = ko.observableArray(userDetails);
 				
+				/// START GRID VIEW
 				self.sortByName = function() {
 					self.items.sort(function(a, b) {
-						return a.name < b.name ? -1 : 1;
+						return a.txtUserName < b.txtUserName ? -1 : 1;
 					});
 				};
-			
 				self.gridViewModel = new ko.simpleGrid.viewModel({
 					data: self.items,
 					columns: [
-						{ headerText: "Name", rowText: "txtUserName" },
+						{ headerText: "Name", rowText: "txtUserName"},						
 						{ headerText: "Contact No.", rowText: "txtContactNo" },
 						{ headerText: "Email", rowText: 'txtEmail' },
 						{ headerText: "Gender", rowText: 'radGender' },
-						{ headerText: "About User", rowText: 'txtAboutUser' }
-					],
-					pageSize: 10
-				});
-	
-				self.txtUserName = ko.observable('');
-				self.txtContactNo = ko.observable('');
-				self.txtEmail = ko.observable('');
-				self.radGender = ko.observable('');				
-				self.txtAboutUser = ko.observable('');
-				self.insertStatus = ko.observable('<span style="color:green">Hi</span>');
-				
-				self.saveUserDetails = function() {	
-					self.User = {txtUserName:self.txtUserName(), txtContactNo:self.txtContactNo(), txtEmail:self.txtEmail(), radGender:self.radGender(), txtAboutUser:self.txtAboutUser()};				
-					var data = ko.toJS({"data":self.User});
-					
-					$.ajax({
-						crossDomain: true,
-						type: 'POST',
-						url: "php_scripts/insert_user_details.php",						
-						data: data,
-						processdata: true,
-						success: function (result) {
-							self.items.push(self.User);
-							self.insertStatus('<span style="color:green">Success</span>');							
-							self.gridViewModel.currentPageIndex( parseInt( Math.ceil(self.items().length/self.gridViewModel.pageSize)-1) );
-							//self.sortByName();
-						},
-						error: function (xhr, ajaxOptions, thrownError) {
-							self.insertStatus('<span style="color:red">Hi please try again.'+xhr.status+'</span>');
-							alert(thrownError);
+						{ headerText: "About User", rowText: 'txtAboutUser' },						
+						{ headerText: "Action", rowText: {action: function(item){
+							return function(){
+								//console.log(item.user_id)
+								ajaxCall('delete', 'php_scripts/insert_user_details.php', item.user_id);
+							}
+							}}
 						}
-					});
-				};
+					],					
+					pageSize: 10
+				});				
+				/// END GRID VIEW
 				
-				self.resetForm = function() {};
+				/// BIND form values
+				self.txtUserName	=	ko.observable();
+				self.txtContactNo	=	ko.observable();
+				self.txtEmail		=	ko.observable();
+				self.radGender		=	ko.observable();
+				self.txtAboutUser	=	ko.observable();
+				self.insertStatus	=	ko.observable('<span style="color:green">Hi</span>');
+				
+				/// START VALIDATE AND SAVE				
+				self.saveUserDetails = function() {
+					self.User = {txtUserName:self.txtUserName(), txtContactNo:self.txtContactNo(), txtEmail:self.txtEmail(), radGender:self.radGender(), txtAboutUser:self.txtAboutUser()};										
+					ajaxCall('insert', 'php_scripts/insert_user_details.php', self.User);
+				};
+				/// END VALIDATE AND SAVE		
 			};
 			
-			ko.applyBindings(new validateAndSaveUserDetails(initialData));
+			var vm = new myViewModel(initialData);			
+			ko.applyBindings(vm);		
+			
+			var ajaxCall	=	function (action, url, dataUser){			
+				
+				var data = (typeof dataUser == 'object') ? ko.toJS({"data":dataUser}) : ko.toJS( {"data":{'userid':dataUser} });
+				var dataitems = vm.items();		
+				
+				$.ajax({
+					crossDomain: true,
+					type: 'POST',
+					url: url+'?action='+action, 
+					data: data,
+					processdata: true,
+					success: function (result) {
+						vm.insertStatus('<span style="color:green">Success</span>');
+						
+						if(action == 'insert'){
+							vm.items.push(dataUser);
+							vm.gridViewModel.currentPageIndex( parseInt( Math.ceil(vm.items().length/vm.gridViewModel.pageSize)-1) );
+						}else if(action == 'delete'){
+							jQuery.each(dataitems, function(a, item){
+								if(item.user_id == dataUser) {
+									vm.items.remove(item);									
+									console.log(vm.items()[a]);									
+									return false;
+								}
+							});
+						}						
+					},
+					error: function (xhr, ajaxOptions, thrownError) {
+						vm.insertStatus('<span style="color:red">Hi please try again.'+xstatus.xhr.status+'</span>');
+						alert(thrownError);
+					}
+				});
+			};
+			
 		</script>
-
 	</body>
 </html>	
