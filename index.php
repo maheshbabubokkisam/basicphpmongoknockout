@@ -7,7 +7,7 @@
 		<meta name="description" content="">
 		<meta name="author" content="">
 		
-		<link href="" media="screen" rel="stylesheet" />		
+		<link href="" media="screen" rel="stylesheet" />
 		<!-- Bootstrap core CSS -->
 		<link href="css/bootstrap.css" rel="stylesheet">
 
@@ -32,8 +32,7 @@
 			.ko-grid-pageLinks a.selected { background-color: Black; color: White; }
 			.liveExample { height:20em; overflow:auto } /* Mobile Safari reflows pages slowly, so fix the height to avoid the need for reflows */
 
-			li { list-style-type: disc; margin-left: 20px; }
-			
+			li { list-style-type: disc; margin-left: 20px; }			
 		</style>
 	</head>
 	
@@ -83,7 +82,7 @@
 									<div class="radio">
 										<label for="radios-0"><input tabindex="4" type="radio" name="radGender" id="radios-0" value="male" data-bind="checked: radGender">Male</label>
 									</div>
-									<div class="radio">									
+									<div class="radio">
 										<label for="radios-1"><input tabindex="5" type="radio" name="radGender" id="radios-1" value="female" data-bind="checked: radGender">Female</label>
 									</div>
 								</div>
@@ -92,7 +91,7 @@
 							<!-- Textarea -->
 							<div class="form-group">
 								<label class="col-md-4 control-label" for="txtAboutUser">About User</label>
-								<div class="col-md-4">                     
+								<div class="col-md-4">
 									<textarea class="form-control" tabindex="6" id="txtAboutUser" name="txtAboutUser" data-bind="value:txtAboutUser">NA</textarea>
 								</div>
 							</div>
@@ -119,7 +118,7 @@
 						<table class="ko-grid" cellspacing="0">
 							<thead>
 								<tr data-bind="foreach: columns">
-									<th data-bind="text: headerText"></th>									
+									<th data-bind="text: headerText"></th>
 								</tr>
 							</thead>
 							<tbody data-bind="foreach: itemsOnCurrentPage">
@@ -135,7 +134,7 @@
 								</tr>
 							</tbody>
 						</table>
-					</script>					
+					</script>
 					
 					<button class="btn btn-success" data-bind='click: sortByName'>Sort by name</button>					
 				</div>
@@ -158,49 +157,48 @@
 		<script type="text/javascript" src="js/script.js"></script>
 			
 		
-		<script type="text/javascript">			
-			//	var initialData = [<?php //echo $userDetailsObj; ?>];			
-			//$.get( "test.php" );
-			var d	=	'';
+		<script type="text/javascript">
+		jQuery(function() {
+			//  If we are calling directly from php we can use this
+			//	var initialData = [<?php //echo $userDetailsObj; ?>];
+			//	var initialData = [ { name: "Optimistic Snail", sales: 420, price: 1.50 }, { name: "Optimistic Snail", sales: 420, price: 1.50 } ]
 			
-			$.post( "php_scripts/insert_user_details.php?action=find", function( data ) {
-				alert(data);
-				d = data;
-			});
+			var vm = '';
 			
-			var initialData = [	d ];
-			alert(initialData.length);
-			//var initialData = [ { name: "Optimistic Snail", sales: 420, price: 1.50 }, { name: "Optimistic Snail", sales: 420, price: 1.50 } ]
-			var delBtn	=	"<button class=\"btn btn-danger\" data-bind=\"click:removeItem\" value=\"delete\" type=\"button\">Delete</button>";
-			//function myViewModel(userDetails) {
-			var myViewModel = function(userDetails) {
-				var self = this;
-				self.items = ko.observableArray(userDetails);
+			// Create a vew model method
+			var myViewModel = function(userDetails) {				
 				
-				/// START GRID VIEW
+				var self = this;	
+				
+				// To detect and respond to changes of a collection of things
+				self.items	=	ko.observableArray(userDetails);	
+
+				// Sort By name 	
 				self.sortByName = function() {
 					self.items.sort(function(a, b) {
-						return a.txtUserName < b.txtUserName ? -1 : 1;
+						return a.name < b.name ? -1 : 1;
 					});
 				};
 				self.gridViewModel = new ko.simpleGrid.viewModel({
 					data: self.items,
 					columns: [
-						{ headerText: "Name", rowText: "txtUserName"},						
+						{ headerText: "Name", rowText: "txtUserName"},
 						{ headerText: "Contact No.", rowText: "txtContactNo" },
 						{ headerText: "Email", rowText: 'txtEmail' },
 						{ headerText: "Gender", rowText: 'radGender' },
-						{ headerText: "About User", rowText: 'txtAboutUser' },						
-						{ headerText: "Action", rowText: {action: function(item){
-							return function(){
-								//console.log(item.user_id)
-								ajaxCall('delete', 'php_scripts/insert_user_details.php', item.user_id);
+						{ headerText: "About User", rowText: 'txtAboutUser' },
+						{ headerText: "Action", 
+							rowText: {
+								action: function(item){
+									return function(){
+										ajaxCall('delete', 'php_scripts/insert_user_details.php', item.user_id);
+									}
+								}
 							}
-							}}
 						}
-					],					
+					],
 					pageSize: 10
-				});				
+				});
 				/// END GRID VIEW
 				
 				/// BIND form values
@@ -209,53 +207,75 @@
 				self.txtEmail		=	ko.observable();
 				self.radGender		=	ko.observable();
 				self.txtAboutUser	=	ko.observable();
-				self.insertStatus	=	ko.observable('<span style="color:green">Hi</span>');
+				self.insertStatus	=	ko.observable('<span style="color:green">Loading user details...</span>');
 				
-				/// START VALIDATE AND SAVE				
+				/// START VALIDATE AND SAVE	
 				self.saveUserDetails = function() {
 					self.User = {txtUserName:self.txtUserName(), txtContactNo:self.txtContactNo(), txtEmail:self.txtEmail(), radGender:self.radGender(), txtAboutUser:self.txtAboutUser()};										
 					ajaxCall('insert', 'php_scripts/insert_user_details.php', self.User);
 				};
-				/// END VALIDATE AND SAVE		
+				/// END VALIDATE AND SAVE
+				
+				self.loadUserDetails = function() {
+					ajaxCall('find', 'php_scripts/insert_user_details.php', '');
+				};				
 			};
 			
-			var vm = new myViewModel(initialData);			
-			ko.applyBindings(vm);		
+			vm = new myViewModel( [] );
+			ko.applyBindings(vm);			
 			
-			var ajaxCall	=	function (action, url, dataUser){			
-				
-				var data = (typeof dataUser == 'object') ? ko.toJS({"data":dataUser}) : ko.toJS( {"data":{'userid':dataUser} });
-				var dataitems = vm.items();		
-				
+			var ajaxCall	=	function (action, url, dataUser){
+				var data = (typeof dataUser == 'object') ? ko.toJS({"data":dataUser}) : ko.toJS( {"data":{'userid':dataUser} });			
+
 				$.ajax({
 					crossDomain: true,
 					type: 'POST',
-					url: url+'?action='+action, 
+					url: url+'?action='+action,
 					data: data,
+					dataType: (action == 'find') ? "json" : '',
 					processdata: true,
 					success: function (result) {
-						vm.insertStatus('<span style="color:green">Success</span>');
-						
+						// If action insert then insert user details in DB and update simpleGrid
 						if(action == 'insert'){
 							vm.items.push(dataUser);
 							vm.gridViewModel.currentPageIndex( parseInt( Math.ceil(vm.items().length/vm.gridViewModel.pageSize)-1) );
-						}else if(action == 'delete'){
-							jQuery.each(dataitems, function(a, item){
+							vm.insertStatus('<span style="color:green">Successfully inserted details</span>');
+						}
+						// If action delete then delete user details from DB and update simpleGrid
+						else if(action == 'delete'){							
+							var dataItems = vm.items();							
+							jQuery.each(dataItems, function(a, item){								
 								if(item.user_id == dataUser) {
-									vm.items.remove(item);									
-									console.log(vm.items()[a]);									
+									vm.items.remove(item);
+									//console.log(vm.items()[a]);
 									return false;
 								}
 							});
-						}						
+							vm.insertStatus('<span style="color:green">Successfully Deleted details</span>');
+						}
+						// If action find then load user details and update simpleGrid
+						else if(action == 'find'){
+							vm.insertStatus('<span style="color:green">Done.</span>');							
+							var userDetails = $.map(result, function(value, index) {
+								return [value];
+							});
+							
+							jQuery.each(userDetails, function(index, item){
+								vm.items.push(item);
+							});							
+							//vm = new myViewModel( userDetails );							
+						}
 					},
-					error: function (xhr, ajaxOptions, thrownError) {
-						vm.insertStatus('<span style="color:red">Hi please try again.'+xstatus.xhr.status+'</span>');
-						alert(thrownError);
+					error: function (xhr, ajaxOptions, thrownError) {				
+						console.log('Hi please try again.'+xhr.status);
+						console.log(ajaxOptions);
+						console.log(thrownError);
 					}
 				});
 			};
-			
+			// Load user details through AJAX call
+			vm.loadUserDetails();			
+		});
 		</script>
 	</body>
 </html>	

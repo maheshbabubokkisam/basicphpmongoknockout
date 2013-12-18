@@ -48,14 +48,18 @@ if($_REQUEST['action'] == 'insert') {
 		// If you want to retrieve specific posts based on user, relations, etc. put filter condition in find 
 		$users_cursor=$collection->find()->sort(array('_id'=>-1));
 		
-		$userDetailsObj	=	'';					
+		$userDetailsObj	=	'';
 		
 		//Iterating over all the retrieved posts
 		while ($users_cursor->hasNext()) { 
-			$user = $users_cursor->getNext();
-			$userDetailsObj	.=	"{user_id:'".$user['_id']."', txtUserName:'".$user['name']."', txtContactNo:'".$user['contact_no']."', txtEmail:'".$user['email']."', radGender:'".$user['gender']."', txtAboutUser:'".$user['comments']."'},";
+			$user = $users_cursor->getNext();			
+			//$userDetailsObj .=	"{user_id:'".$user['_id']->{'$id'}."', txtUserName:'".$user['name']."', txtContactNo:'".$user['contact_no']."', txtEmail:'".$user['email']."', radGender:'".$user['gender']."', txtAboutUser:'".$user['comments']."'},";			
+			$userDetailsObj[] =	 array('user_id'=>$user['_id']->{'$id'}, 'txtUserName'=>$user['name'], 'txtContactNo'=>$user['contact_no'], 'txtEmail'=>$user['email'], 'radGender'=>$user['gender'], 'txtAboutUser'=>$user['comments'] );			
 		}
-		echo $userDetailsObj;
+		
+		header('Content-Type: application/json');		
+		echo json_encode( $userDetailsObj, JSON_FORCE_OBJECT );
+		
 	} catch(MongoCursorException $e) {
 		echo $e->getMessage();
 		echo $e->getCode();
