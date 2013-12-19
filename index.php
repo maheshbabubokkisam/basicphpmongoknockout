@@ -32,30 +32,30 @@
 			.ko-grid-pageLinks a.selected { background-color: Black; color: White; }
 			.liveExample { height:20em; overflow:auto } /* Mobile Safari reflows pages slowly, so fix the height to avoid the need for reflows */
 
-			li { list-style-type: disc; margin-left: 20px; }			
+			li { list-style-type: disc; margin-left: 20px; }
+			.action-status{color:green;}			
 		</style>
 	</head>
 	
 	<body>
 		<div class="container">
 			<header class="navbar navbar-inverse navbar-fixed-top">
-				<div class="navbar-inner">
-				</div>
+				<div class="navbar-inner"></div>
 			</header>
 
 			<div class="row">
 				<div class="span4">
 					<br>
 					<form class="form-horizontal" id="form">
-						<fieldset>			
+						<fieldset>
 							<!-- Form Name -->
 							<legend>Add User details</legend>
-
+							<input type="hidden" id="hidUserId" name="hidUserId" data-bind="value:hidUserId" />
 							<!-- Text input-->
 							<div class="form-group">
 								<label class="col-md-4 control-label" for="txtUserName">User Name</label>  
 								<div class="col-md-4">
-									<input tabindex="1" id="txtUserName" name="txtUserName" type="text" placeholder="Enter User name" class="form-control input-md" data-bind="value: txtUserName" data-required="true" data-msg_empty="Enter User name" />
+									<input tabindex="1" id="txtUserName" name="txtUserName" type="text" required placeholder="Enter User name" class="form-control input-md" data-bind="value: txtUserName" data-required="true" data-msg_empty="Enter User name" />
 								</div>
 							</div>
 							
@@ -63,7 +63,7 @@
 							<div class="form-group">
 								<label class="col-md-4 control-label" for="txtContactNo">Contact No.</label>  
 								<div class="col-md-4">
-									<input tabindex="2" id="txtContactNo" name="txtContactNo" type="text" placeholder="Enter Contact No." class="form-control input-md" data-bind="value: txtContactNo" />
+									<input tabindex="2" id="txtContactNo" name="txtContactNo" type="number" size="10" required placeholder="Enter Contact No." class="form-control input-md" pattern="[0-9]{10}" data-bind="value: txtContactNo" />
 								</div>
 							</div>
 							
@@ -71,7 +71,7 @@
 							<div class="form-group">
 								<label class="col-md-4 control-label" for="txtEmail">Email</label>
 								<div class="col-md-4">
-									<input tabindex="3" id="txtEmail" name="txtEmail" type="text" placeholder="Enter Email" class="form-control input-md" data-bind="value: txtEmail" data-required="true" data-email="true" data-msg_empty="Enter a E-Mail." />
+									<input tabindex="3" id="txtEmail" name="txtEmail" type="email" required placeholder="Enter Email" class="form-control input-md" data-bind="value: txtEmail" data-required="true" data-email="true" data-msg_empty="Enter a E-Mail." />
 								</div>
 							</div>
 
@@ -104,7 +104,7 @@
 									<button tabindex="8" type="reset" id="button2id" name="button2id" class="btn btn-danger">Cancel</button>
 								</div>
 							</div>
-							<div class="form-group" data-bind="html:insertStatus"></div>
+							<div class="action-status" data-bind="html:actionStatus"></div>							
 						</fieldset>
 					</form>	
 				</div>
@@ -124,9 +124,15 @@
 							<tbody data-bind="foreach: itemsOnCurrentPage">
 							   <tr data-bind="foreach: $parent.columns">
 								   
-								   <!--ko if: typeof rowText == 'object' && typeof rowText.action == 'function'-->
-								   <td><button class="btn btn-danger" data-bind="click:rowText.action($parent)">Delete</button></td>
-								   <!-- /ko -->
+									<!--ko if: typeof rowText == 'object' && typeof rowText.action == 'function'-->
+										<!--ko if: actionText == 'Delete'-->
+										<td><button class="btn btn-danger" data-bind="click:rowText.action($parent)">Delete</button></td>
+										<!-- /ko -->
+										
+										<!--ko if: actionText == 'Edit'-->
+										<td><button class="btn btn-danger" data-bind="click:rowText.action($parent)">Edit</button></td>
+										<!-- /ko -->
+								    <!-- /ko -->
 								   
 								   <!--ko ifnot: typeof rowText == 'object' && typeof rowText.action == 'function'-->
 								   <td data-bind="text: typeof rowText == 'function' ? rowText($parent) : $parent[rowText] "></td>
@@ -149,21 +155,29 @@
 		  <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
 		  <script src="https://oss.maxcdn.com/libs/respond.js/1.3.0/respond.min.js"></script>
 		<![endif]-->
+		    
+		<script type="text/javascript" src="js/jquery-1.11.0.js"></script>		
 		
-		<script type="text/javascript" src="http://code.jquery.com/jquery-1.10.1.min.js"></script>
 		<script type="text/javascript" src="js/bootstrap.js"></script>
-		<script type="text/javascript" src="js/knockout-3.0.0.js"></script>		
+		
+		<script type="text/javascript" src="js/knockout-3.0.0.js"></script>
 		<script type="text/javascript" src="js/knockout.simpleGrid.3.0.js"></script>		
-		<script type="text/javascript" src="js/script.js"></script>
-			
+		<script type="text/javascript" src="js/knockout.validation.js"></script>
 		
 		<script type="text/javascript">
-		jQuery(function() {
+		jQuery(function() {			
+		
 			//  If we are calling directly from php we can use this
 			//	var initialData = [<?php //echo $userDetailsObj; ?>];
 			//	var initialData = [ { name: "Optimistic Snail", sales: 420, price: 1.50 }, { name: "Optimistic Snail", sales: 420, price: 1.50 } ]
 			
-			var vm = '';
+			ko.validation.configure({
+				insertMessages: false,
+				decorateElement: true,
+				// errorElementClass: 'error' 
+			});
+			
+			var vm = '';		
 			
 			// Create a vew model method
 			var myViewModel = function(userDetails) {				
@@ -187,37 +201,58 @@
 						{ headerText: "Email", rowText: 'txtEmail' },
 						{ headerText: "Gender", rowText: 'radGender' },
 						{ headerText: "About User", rowText: 'txtAboutUser' },
-						{ headerText: "Action", 
+						{ 
+							headerText: "",
 							rowText: {
 								action: function(item){
 									return function(){
-										ajaxCall('delete', 'php_scripts/insert_user_details.php', item.user_id);
+										ajaxCall('delete', 'php_scripts/user_details.php', item.user_id);
 									}
 								}
-							}
+							},
+							actionText:"Delete"
+						},						
+						{
+							headerText: "",
+							rowText: {
+								action: function(item){
+									return function(){									
+										self.hidUserId(item.user_id);
+										self.txtUserName(item.txtUserName);
+										self.txtContactNo(item.txtContactNo);
+										self.txtEmail(item.txtEmail);
+										self.radGender(item.radGender);
+										self.txtAboutUser(item.txtAboutUser);
+									}
+								}
+							},
+							actionText:"Edit"
 						}
+						
 					],
 					pageSize: 10
 				});
 				/// END GRID VIEW
 				
 				/// BIND form values
+				self.hidUserId		=	ko.observable();
 				self.txtUserName	=	ko.observable();
 				self.txtContactNo	=	ko.observable();
 				self.txtEmail		=	ko.observable();
 				self.radGender		=	ko.observable();
 				self.txtAboutUser	=	ko.observable();
-				self.insertStatus	=	ko.observable('<span style="color:green">Loading user details...</span>');
+				self.actionStatus	=	ko.observable('<span style="color:green">Loading user details...</span>');
+				self.ajaxStatus		=	ko.observable('');
 				
 				/// START VALIDATE AND SAVE	
 				self.saveUserDetails = function() {
-					self.User = {txtUserName:self.txtUserName(), txtContactNo:self.txtContactNo(), txtEmail:self.txtEmail(), radGender:self.radGender(), txtAboutUser:self.txtAboutUser()};										
-					ajaxCall('insert', 'php_scripts/insert_user_details.php', self.User);
+					self.User = {hidUserId:self.hidUserId(), txtUserName:self.txtUserName(), txtContactNo:self.txtContactNo(), txtEmail:self.txtEmail(), radGender:self.radGender(), txtAboutUser:self.txtAboutUser()};										
+					ajaxCall('insert', 'php_scripts/user_details.php', self.User);
 				};
 				/// END VALIDATE AND SAVE
 				
 				self.loadUserDetails = function() {
-					ajaxCall('find', 'php_scripts/insert_user_details.php', '');
+					ajaxCall('find', 'php_scripts/user_details.php', '');
 				};				
 			};
 			
@@ -226,36 +261,35 @@
 			
 			var ajaxCall	=	function (action, url, dataUser){
 				var data = (typeof dataUser == 'object') ? ko.toJS({"data":dataUser}) : ko.toJS( {"data":{'userid':dataUser} });			
-
+				
 				$.ajax({
 					crossDomain: true,
 					type: 'POST',
 					url: url+'?action='+action,
-					data: data,
-					dataType: (action == 'find') ? "json" : '',
+					data: data,					
 					processdata: true,
 					success: function (result) {
 						// If action insert then insert user details in DB and update simpleGrid
 						if(action == 'insert'){
 							vm.items.push(dataUser);
 							vm.gridViewModel.currentPageIndex( parseInt( Math.ceil(vm.items().length/vm.gridViewModel.pageSize)-1) );
-							vm.insertStatus('<span style="color:green">Successfully inserted details</span>');
+							if(vm.hidUserId() == ''){
+								vm.actionStatus('<span style="color:green">Successfully inserted details</span>');
+							}else{
+								removeItem(vm.items(), vm.hidUserId());								
+								vm.actionStatus('<span style="color:green">Successfully Updated details</span>');
+							}
+							document.getElementById("form").reset();
+							vm.hidUserId('');
 						}
 						// If action delete then delete user details from DB and update simpleGrid
 						else if(action == 'delete'){							
-							var dataItems = vm.items();							
-							jQuery.each(dataItems, function(a, item){								
-								if(item.user_id == dataUser) {
-									vm.items.remove(item);
-									//console.log(vm.items()[a]);
-									return false;
-								}
-							});
-							vm.insertStatus('<span style="color:green">Successfully Deleted details</span>');
+							removeItem(vm.items(), vm.hidUserId());	
+							vm.actionStatus('<span style="color:green">Successfully Deleted details</span>');
 						}
 						// If action find then load user details and update simpleGrid
 						else if(action == 'find'){
-							vm.insertStatus('<span style="color:green">Done.</span>');							
+							vm.actionStatus('<span style="color:green">Done.</span>');							
 							var userDetails = $.map(result, function(value, index) {
 								return [value];
 							});
@@ -266,13 +300,22 @@
 							//vm = new myViewModel( userDetails );							
 						}
 					},
-					error: function (xhr, ajaxOptions, thrownError) {				
-						console.log('Hi please try again.'+xhr.status);
-						console.log(ajaxOptions);
-						console.log(thrownError);
+					error: function (xhr, ajaxOptions, thrownError) {						
+						vm.actionStatus('<span style="color:red;">Error {Status: '+xhr.status+'}, {Options: '+ajaxOptions+'}, {Error: '+thrownError+'}</span>');
 					}
 				});
 			};
+			
+			var removeItem = function(usersObj, userObj){
+				jQuery.each(usersObj, function(a, item){
+					if(item.user_id == userObj) {
+						vm.items.remove(item);
+						//console.log(vm.items()[a]);
+						return false;
+					}
+				});				
+			};
+			
 			// Load user details through AJAX call
 			vm.loadUserDetails();			
 		});
