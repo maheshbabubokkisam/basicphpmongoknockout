@@ -18,7 +18,7 @@ if($_REQUEST['action'] == 'insert') {
 
 	// Generating a new post id
 	
-	$user_id	= ( isset($data['hidUserId']) && $data['hidUserId'] != '' ) ? new MongoId($data['hidUserId']) : new MongoId();
+	$user_id	= ( isset($data['user_id']) && $data['user_id'] != '' ) ? new MongoId($data['user_id']) : new MongoId();
 	
 	// Generating post timestamp from the user id
 	// The statement should differ based on the date format needed and time zone 
@@ -26,13 +26,14 @@ if($_REQUEST['action'] == 'insert') {
 	$details	=	array( 'name' => $data['txtUserName'], 'contact_no' => $data['txtContactNo'], 'email' => $data['txtEmail'], 'gender' => $data['radGender'], 'comments' => $data['txtAboutUser'], 'timestamp'=>$timestamp);
 	
 	try {
-		if(isset($data['hidUserId']) && $data['hidUserId'] != ''){	
+		if(isset($data['user_id']) && $data['user_id'] != ''){	
 			// UPDATE
 			$collection->update( array( '_id' => $user_id), array( '$set' => $details ) );		
 		}else{
 			// Creates document for inserting new post			
 			$collection->insert(array ( '_id'=> $user_id, 'name' => $data['txtUserName'], 'contact_no' => $data['txtContactNo'], 'email' => $data['txtEmail'], 'gender' => $data['radGender'], 'comments' => $data['txtAboutUser'], 'timestamp'=>$timestamp));
 		}
+		echo json_encode(array('userid'=>$user_id->{'$id'}), JSON_FORCE_OBJECT);
 	} catch(MongoCursorException $e) {
 		echo $e->getMessage();
 		echo $e->getCode();		
@@ -43,7 +44,8 @@ if($_REQUEST['action'] == 'insert') {
 	$data		=	$_POST['data'];
 
 	try {
-		$collection->remove(array("_id" => new MongoId($data['userid']) ), array("justOne" => true));
+		$collection->remove(array("_id" => new MongoId($data['user_id']) ), array("justOne" => true));
+		echo json_encode(array('status'=>true), JSON_FORCE_OBJECT);		
 	} catch(MongoCursorException $e) {
 		echo $e->getMessage();
 		echo $e->getCode();

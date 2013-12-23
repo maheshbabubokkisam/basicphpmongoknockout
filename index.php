@@ -185,8 +185,31 @@
 				var self = this;	
 				
 				// To detect and respond to changes of a collection of things
-				self.items	=	ko.observableArray(userDetails);	
-
+				self.items	=	ko.observableArray(userDetails);
+				
+				/// BIND form values				
+				self.user_id		=	ko.observable();
+				self.hidUserId		=	self.user_id;
+				
+				self.txtUserName	=	ko.observable();
+				self.txtContactNo	=	ko.observable();
+				self.txtEmail		=	ko.observable();
+				self.radGender		=	ko.observable();
+				self.txtAboutUser	=	ko.observable();
+				self.actionStatus	=	ko.observable('<span style="color:green">Loading user details...</span>');
+				self.ajaxStatus		=	ko.observable('');
+				
+				/// START VALIDATE AND SAVE	
+				self.saveUserDetails = function() {
+					self.User = {user_id:self.user_id(), txtUserName:self.txtUserName(), txtContactNo:self.txtContactNo(), txtEmail:self.txtEmail(), radGender:self.radGender(), txtAboutUser:self.txtAboutUser()};										
+					ajaxCall('insert', 'php_scripts/user_details.php', self.User);
+				};
+				/// END VALIDATE AND SAVE
+				
+				self.loadUserDetails = function() {
+					ajaxCall('find', 'php_scripts/user_details.php', '');
+				};
+				
 				// Sort By name 	
 				self.sortByName = function() {
 					self.items.sort(function(a, b) {
@@ -204,9 +227,11 @@
 						{ 
 							headerText: "",
 							rowText: {
-								action: function(item){
+								action: function(item){									
 									return function(){
-										ajaxCall('delete', 'php_scripts/user_details.php', item.user_id);
+										if(confirm("Are you sure you want Delete this record")){
+											ajaxCall('delete', 'php_scripts/user_details.php', item.user_id);
+										}	
 									}
 								}
 							},
@@ -216,7 +241,8 @@
 							headerText: "",
 							rowText: {
 								action: function(item){
-									return function(){									
+									return function(){
+										//console.log('Edit');console.log(item);
 										self.hidUserId(item.user_id);
 										self.txtUserName(item.txtUserName);
 										self.txtContactNo(item.txtContactNo);
@@ -232,64 +258,74 @@
 					],
 					pageSize: 10
 				});
-				/// END GRID VIEW
-				
-				/// BIND form values
-				self.hidUserId		=	ko.observable();
-				self.txtUserName	=	ko.observable();
-				self.txtContactNo	=	ko.observable();
-				self.txtEmail		=	ko.observable();
-				self.radGender		=	ko.observable();
-				self.txtAboutUser	=	ko.observable();
-				self.actionStatus	=	ko.observable('<span style="color:green">Loading user details...</span>');
-				self.ajaxStatus		=	ko.observable('');
-				
-				/// START VALIDATE AND SAVE	
-				self.saveUserDetails = function() {
-					self.User = {hidUserId:self.hidUserId(), txtUserName:self.txtUserName(), txtContactNo:self.txtContactNo(), txtEmail:self.txtEmail(), radGender:self.radGender(), txtAboutUser:self.txtAboutUser()};										
-					ajaxCall('insert', 'php_scripts/user_details.php', self.User);
-				};
-				/// END VALIDATE AND SAVE
-				
-				self.loadUserDetails = function() {
-					ajaxCall('find', 'php_scripts/user_details.php', '');
-				};				
+				/// END GRID VIEW				
 			};
 			
 			vm = new myViewModel( [] );
 			ko.applyBindings(vm);			
 			
 			var ajaxCall	=	function (action, url, dataUser){
-				var data = (typeof dataUser == 'object') ? ko.toJS({"data":dataUser}) : ko.toJS( {"data":{'userid':dataUser} });			
+				var data = (typeof dataUser == 'object') ? ko.toJS({"data":dataUser}) : ko.toJS( {"data":{'user_id':dataUser} });
 				
 				$.ajax({
 					crossDomain: true,
 					type: 'POST',
 					url: url+'?action='+action,
-					data: data,					
+					data: data,
+					dataType: 'json',
 					processdata: true,
-					success: function (result) {
+					success: function (result) {			
+					
 						// If action insert then insert user details in DB and update simpleGrid
 						if(action == 'insert'){
-							vm.items.push(dataUser);
-							vm.gridViewModel.currentPageIndex( parseInt( Math.ceil(vm.items().length/vm.gridViewModel.pageSize)-1) );
-							if(vm.hidUserId() == ''){
+							// Check weather hiddenUserId is empty or not, 
+							// If empty then it is new user details otherwise Update the details							
+							if(dataUser.user_id == undefined){
+								// Add new user details to items (either insert or update)
+								dataUser.user_id = result.userid;
+								console.log(vm.items()); console.log(dataUser);				
+								vm.items.push(dataUser);
+								vm.gridViewModel.currentPageIndex( parseInt( Math.ceil(vm.items().length/vm.gridViewModel.pageSize)-1) );
 								vm.actionStatus('<span style="color:green">Successfully inserted details</span>');
 							}else{
-								removeItem(vm.items(), vm.hidUserId());								
-								vm.actionStatus('<span style="color:green">Successfully Updated details</span>');
+								// Return user object position from usersArray using user_id/dataUser
+								var pos = vm.items().map(function(e) { return e.user_id; }).indexOf(vm.hidUserId());
+								
+								// flag is the position of object in array
+								if(pos >= 0 ){
+									//console.log(vm.items()[pos]);console.log(dataUser);
+									// Call compare objects method 
+									var flag = compareObjects(vm.items()[pos], dataUser);
+									//console.log(flag);
+									
+									if(flag === false) {
+										vm.items.remove(vm.items()[pos]);
+										vm.items.push(dataUser);
+									}
+									
+									vm.actionStatus('<span style="color:green">Successfully Updated details</span>');
+								}
 							}
-							document.getElementById("form").reset();
-							vm.hidUserId('');
+							
+							// Reset the form elements after Edit/Add
+							vm.hidUserId(''); vm.txtUserName(''); vm.txtContactNo('');
+							vm.txtEmail(''); vm.radGender(''); vm.txtAboutUser('');
 						}
+
 						// If action delete then delete user details from DB and update simpleGrid
-						else if(action == 'delete'){							
-							removeItem(vm.items(), vm.hidUserId());	
+						else if(action == 'delete'){
+						
+							// Return user object position from usersArray using user_id/dataUser
+							var pos = vm.items().map(function(e) { return e.user_id; }).indexOf(dataUser);
+							
+							vm.items.remove(vm.items()[pos]);
 							vm.actionStatus('<span style="color:green">Successfully Deleted details</span>');
 						}
+
 						// If action find then load user details and update simpleGrid
 						else if(action == 'find'){
 							vm.actionStatus('<span style="color:green">Done.</span>');							
+							
 							var userDetails = $.map(result, function(value, index) {
 								return [value];
 							});
@@ -306,14 +342,85 @@
 				});
 			};
 			
-			var removeItem = function(usersObj, userObj){
-				jQuery.each(usersObj, function(a, item){
-					if(item.user_id == userObj) {
-						vm.items.remove(item);
-						//console.log(vm.items()[a]);
-						return false;
-					}
-				});				
+			//Returns the object's class, Array, Date, RegExp, Object are of interest to us
+			var getClass = function(val) {
+				return Object.prototype.toString.call(val).match(/^\[object\s(.*)\]$/)[1];
+			};
+			 
+			//Defines the type of the value, extended typeof
+			var whatis = function(val) {			 
+				if (val === undefined) { return 'undefined'; }
+				if (val === null){	return 'null'; }
+			 
+				var type = typeof val;
+			 
+				if (type === 'object') { type = getClass(val).toLowerCase(); }
+			 
+				if (type === 'number') {
+					if (val.toString().indexOf('.') > 0) { return 'float'; }
+					else { return 'integer'; }
+				}			 
+				return type;
+			};
+			 
+			/**
+			 *  Compare two Objects
+			 *  @parm a (object), b (object)
+			 *  @return flag false/true
+			 */
+			var compareObjects = function(a, b) {
+				if (a === b){ return true; }
+				for (var i in a) {
+					if (b.hasOwnProperty(i)) {
+						if (!equal(a[i],b[i])) { return false; }
+					} else { return false; }
+				}
+			 
+				for (var i in b) {
+					if (!a.hasOwnProperty(i)) { return false; }
+				}
+				return true;
+			};
+			
+			/**
+			 *  Compare two Arrays
+			 *  @parm a (array), b (array)
+			 *  @return flag false/true
+			 */
+			var compareArrays = function(a, b) {
+				if (a === b) { return true; }
+				if (a.length !== b.length) { return false; }
+				
+				for (var i = 0; i < a.length; i++){
+					if(!equal(a[i], b[i])) { return false; }
+				};
+				return true;
+			};
+			 
+			var _equal = {};
+			_equal.array = compareArrays;
+			_equal.object = compareObjects;
+			_equal.date = function(a, b) { return a.getTime() === b.getTime(); };
+			_equal.regexp = function(a, b) { return a.toString() === b.toString(); };
+			//	uncoment to support function as string compare
+			//	_equal.fucntion =  _equal.regexp; 			 
+			 
+			/*
+			 * Are two values equal, deep compare for objects and arrays.
+			 * @param a {any}
+			 * @param b {any}
+			 * @return {boolean} Are equal?
+			 */
+			var equal = function(a, b) {
+				if (a !== b) {
+					var atype = whatis(a), btype = whatis(b);
+			 
+					if (atype === btype && _equal.hasOwnProperty(atype))
+						return _equal[atype](a, b);
+			 
+					return false;
+				}			 
+				return true;
 			};
 			
 			// Load user details through AJAX call
