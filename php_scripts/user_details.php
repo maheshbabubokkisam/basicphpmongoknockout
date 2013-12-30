@@ -47,7 +47,6 @@ if($_REQUEST['action'] == 'insert') {
 				// Get user_id object for user_id
 				$user_id	= new MongoId($data['user_id']);
 				$collection->update( array( '_id' => $user_id), array( '$set' => array( 'name' => $data['txtUserName'], 'contact_no' => $data['txtContactNo'], 'email' => $data['txtEmail'], 'gender' => $data['radGender'], 'comments' => $data['txtAboutUser']) ) );
-				$returnData	=	array('userid'=>$user_id->{'$id'});
 			}else{
 				// INSERT
 				// Generate new mongoId for user_id
@@ -56,7 +55,8 @@ if($_REQUEST['action'] == 'insert') {
 				// The statement should differ based on the date format needed and time zone 				
 				$timestamp	=	date('D, d-M-Y', $user_id->getTimestamp()+19800);
 				// Creates document for inserting new post
-				$collection->insert(array ( '_id'=> $user_id, 'name' => $data['txtUserName'], 'contact_no' => $data['txtContactNo'], 'email' => $data['txtEmail'], 'gender' => $data['radGender'], 'comments' => $data['txtAboutUser'], 'timestamp'=>$timestamp));				
+				$collection->insert(array ( '_id'=> $user_id, 'name' => $data['txtUserName'], 'contact_no' => $data['txtContactNo'], 'email' => $data['txtEmail'], 'gender' => $data['radGender'], 'comments' => $data['txtAboutUser'], 'timestamp'=>$timestamp));
+				$returnData	=	array('userid'=>$user_id->{'$id'});
 			}
 			$status		=	true;			
 		}else{
